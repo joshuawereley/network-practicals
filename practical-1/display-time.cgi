@@ -38,7 +38,7 @@ public class DisplayTime {
         }
     }
 
-    private static int readTimezone() {
+    private static int readTimezone() throws IOException {
         try (BufferedReader reader = new BufferedReader(new FileReader("/var/www/data/timezone.txt")) {
             return Integer.parseInt(reader.readLine().trim());
         }
