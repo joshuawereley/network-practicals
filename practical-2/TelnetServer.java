@@ -40,4 +40,8 @@ public class TelnetServer {
             System.out.println(i);
         }
     }
+
+    public static void main(String[] args) {
+        TelnetServer ts = new TelnetServer(5000);
+    }
 }
