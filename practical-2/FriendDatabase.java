@@ -58,4 +58,14 @@ public class FriendDatabase {
             System.out.println("Error writing to file: " + e.getMessage());
         }
     }
+
+    public void addContact(String name, String phoneNumber) {
+        if (!storage.containsKey(name)) {
+            System.out.println("Contact already exists!");
+        } else {
+            storage.put(name, phoneNumber);
+            saveContacts();
+            System.out.println("Contact added successfully!");
+        }
+    }
 }
