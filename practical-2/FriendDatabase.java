@@ -68,4 +68,12 @@ public class FriendDatabase {
             System.out.println("Contact added successfully!");
         }
     }
+
+    public String searchContact(String name) {
+        if (storage.isEmpty() || !storage.containsKey(name)) {
+            return "Contact not found!";
+        } else {
+            return storage.get(name);
+        }
+    }
 }
