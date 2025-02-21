@@ -38,7 +38,7 @@ public class FriendDatabase {
                 writeToFile(file.getName());
             } else {
                 System.out.println("File already exists");
-                writeToFile(file.getName())
+                writeToFile(file.getName());
             }
         } catch (IOException e) {
             System.out.println("Error creating file: " + e.getMessage());
