@@ -76,4 +76,14 @@ public class FriendDatabase {
             return storage.get(name);
         }
     }
+
+    public void deleteContact(String name) {
+        if (storage.isEmpty() || !storage.containsKey(name)) {
+            System.out.println("Contact not found!");
+        } else {
+            storage.remove(name);
+            saveContacts();
+            System.out.println("Contact deleted successfully!");
+        }
+    }
 }
