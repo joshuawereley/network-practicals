@@ -86,4 +86,14 @@ public class FriendDatabase {
             System.out.println("Contact deleted successfully!");
         }
     }
+
+    public void listContacts() {
+        if (storage.isEmpty()) {
+            System.out.println("No contacts available!");
+        } else {
+            for (String i : storage.keySet()) {
+                System.out.println(i + ", " + storage.get(i));
+            }
+        }
+    }
 }
