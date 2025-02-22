@@ -5,4 +5,8 @@ public class ANSIFormatter {
     public ANSIFormatter() {
         esc = "\033[";
     }
+
+    public String colourText(String text, String colourCode) {
+        return esc + colourCode + "m" + text + esc + "0m";
+    }
 }
