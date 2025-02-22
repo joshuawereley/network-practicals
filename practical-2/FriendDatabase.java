@@ -63,20 +63,6 @@ public class FriendDatabase {
         }
     }
 
-    public void writeToFile(String fileName) {
-        try {
-            FileWriter writer = new FileWriter(fileName);
-            for (String i : storage.keySet()) {
-                //TODO: NEED TO FORMAT BETTER WHEN WRITING TO FILE
-                writer.write(i + "," + storage.get(i));
-            }
-            writer.close();
-            System.out.println("Successfully wrote to " + fileName);
-        } catch (IOException e) {
-            System.out.println("Error writing to file: " + e.getMessage());
-        }
-    }
-
     public String addContact(String name, String surname, String phoneNumber) {
         String fullName = name + " " + surname;
         if (!storage.containsKey(fullName)) {
