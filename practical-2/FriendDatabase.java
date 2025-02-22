@@ -85,13 +85,12 @@ public class FriendDatabase {
         }
     }
 
-    public void listContacts() {
-        if (storage.isEmpty()) {
-            System.out.println("No contacts available!");
-        } else {
-            for (String i : storage.keySet()) {
-                System.out.println(i + ", " + storage.get(i));
-            }
+    public String listContacts() {
+        if (storage.isEmpty()) return "No contacts available!";
+        StringBuilder list = new StringBuilder();
+        for (String i : storage.keySet()) {
+            list.append(i).append(": ").append(storage.get(i)).append("\n");
         }
+        return list.toString();
     }
 }
