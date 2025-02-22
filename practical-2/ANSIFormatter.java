@@ -9,4 +9,8 @@ public class ANSIFormatter {
     public String colourText(String text, String colourCode) {
         return esc + colourCode + "m" + text + esc + "0m";
     }
+
+    public String clearScreen() {
+        return esc + "2J";
+    }
 }
