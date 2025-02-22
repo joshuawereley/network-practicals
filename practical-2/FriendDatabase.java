@@ -40,16 +40,26 @@ public class FriendDatabase {
 
     public void saveContacts() {
         try {
-            File file = new File("friends.txt");
-            if (file.createNewFile()) {
-                System.out.println("File created: " + file.getName());
-                writeToFile(file.getName());
-            } else {
-                System.out.println("File already exists");
-                writeToFile(file.getName());
+            File file = new File(FILE_NAME);
+            FileWriter fileWriter = new FileWriter(file);
+            int count = 0;
+            int totalEntries = storage.size();
+            for (String i : storage.keySet()) {
+                String[] nameParts = i.split(" ", 2);
+                if (nameParts.length == 2) {
+                    String name = nameParts[0];
+                    String surname = nameParts[1];
+                    String phoneNumber = nameParts[2];
+                    fileWriter.write(name + "," + surname + "," + phoneNumber);
+                    if (count < totalEntries - 1) fileWriter.write("\n");
+                    count++;
+                } else {
+                    System.err.println("Invalid name format in database: " + i);
+                }
             }
+            fileWriter.close();
         } catch (IOException e) {
-            System.out.println("Error creating file: " + e.getMessage());
+            System.out.println("Error saving database: " + e.getMessage());
         }
     }
 
