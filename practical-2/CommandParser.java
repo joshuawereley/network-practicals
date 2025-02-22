@@ -49,8 +49,7 @@ public class CommandParser {
                     return "Usage: DELETE <name> <surname>";
                 }
             case "LIST":
-                database.listContacts();
-                return "Listed contacts successfully!";
+                return database.listContacts();
             case "HELP":
                 String commands = "Available commands:\n";
                 commands +=

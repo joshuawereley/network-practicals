@@ -49,7 +49,7 @@ public class FriendDatabase {
                 if (nameParts.length == 2) {
                     String name = nameParts[0];
                     String surname = nameParts[1];
-                    String phoneNumber = nameParts[2];
+                    String phoneNumber = storage.get(i);
                     fileWriter.write(name + "," + surname + "," + phoneNumber);
                     if (count < totalEntries - 1) fileWriter.write("\n");
                     count++;
@@ -65,7 +65,7 @@ public class FriendDatabase {
 
     public String addContact(String name, String surname, String phoneNumber) {
         String fullName = name + " " + surname;
-        if (!storage.containsKey(fullName)) {
+        if (storage.containsKey(fullName)) {
             return "Contact already exists!";
         } else {
             storage.put(fullName, phoneNumber);
