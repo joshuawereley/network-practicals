@@ -6,53 +6,45 @@ import java.net.Socket;
 
 public class ClientHandler implements Runnable {
 
-    private Socket s;
+    private Socket socket;
     private BufferedReader input;
     private PrintWriter output;
+    private CommandParser parser;
 
-    public ClientHandler(Socket s) {
-        this.s = s;
+    public ClientHandler(Socket socket) {
+        this.socket = socket;
+        parser = new CommandParser(new FriendDatabase());
     }
 
     public void run() {
         try {
-            InputStreamReader isr = new InputStreamReader(s.getInputStream());
+            InputStreamReader isr = new InputStreamReader(
+                socket.getInputStream()
+            );
             input = new BufferedReader(isr);
-            output = new PrintWriter(s.getOutputStream(), true);
+            output = new PrintWriter(socket.getOutputStream(), true);
 
-            output.println("Hello! Welcome to the Telnet server!");
-            output.println("Type HELP for a list of commands.");
+            output.println("Welcome to the Telnet server!");
+            output.println("Type HELP for available commands.");
 
             String clientMessage;
             while ((clientMessage = input.readLine()) != null) {
                 if (clientMessage.equalsIgnoreCase("EXIT")) {
-                    output.println("Goodbye");
+                    output.println("Goodbye!");
                     break;
-                } else if (clientMessage.equalsIgnoreCase("HELP")) {
-                    output.println(
-                        "Available commands: ADD, SEARCH, DELETE, LIST, EXIT"
-                    );
-                } else {
-                    output.println("Unknown command. Type HELP for options.");
                 }
+                String response = parser.processCommand(clientMessage);
+                output.println(response);
             }
-        } catch (IOException i) {
-            System.out.println("Error handling client: " + i.getMessage());
+        } catch (IOException e) {
+            System.err.println("Client disconnected: " + e.getMessage());
         } finally {
             try {
-                if (input != null) {
-                    input.close();
-                }
-                if (output != null) {
-                    output.close();
-                }
-                if (s != null) {
-                    s.close();
-                }
-            } catch (IOException i) {
-                System.out.println(
-                    "Error closing resources: " + i.getMessage()
-                );
+                if (input != null) input.close();
+                if (output != null) output.close();
+                if (socket != null) socket.close();
+            } catch (IOException e) {
+                System.err.println("Error closing client: " + e.getMessage());
             }
         }
     }
