@@ -70,12 +70,9 @@ public class FriendDatabase {
         }
     }
 
-    public String searchContact(String name) {
-        if (storage.isEmpty() || !storage.containsKey(name)) {
-            return "Contact not found!";
-        } else {
-            return storage.get(name);
-        }
+    public String searchContact(String name, String surname) {
+        String fullName = name + " " + surname;
+        return storage.getOrDefault(fullName, "Contact not found!");
     }
 
     public void deleteContact(String name) {
