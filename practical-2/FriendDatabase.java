@@ -7,22 +7,30 @@ import java.util.Scanner;
 
 public class FriendDatabase {
 
-    HashMap<String, String> storage;
+    private HashMap<String, String> storage;
+    private static final String FILE_NAME = "friends.txt";
 
     public FriendDatabase() {
         storage = new HashMap<String, String>();
+        loadContacts();
     }
 
     public void loadContacts() {
         try {
-            File file = new File("friends.txt");
+            File file = new File(FILE_NAME);
             Scanner reader = new Scanner(file);
             while (reader.hasNextLine()) {
                 String data = reader.nextLine();
                 String[] splitData = data.split(",");
-                String name = splitData[0];
-                String number = splitData[1];
-                storage.put(name, number);
+                if (splitData.length == 3) {
+                    String name = splitData[0].trim();
+                    String surname = splitData[1].trim();
+                    String phoneNumber = splitData[2].trim();
+                    String fullName = name + " " + surname;
+                    storage.put(fullName, phoneNumber);
+                } else {
+                    System.err.println("Invalid entry in database: " + data);
+                }
             }
             reader.close();
         } catch (FileNotFoundException e) {
