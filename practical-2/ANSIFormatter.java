@@ -17,4 +17,8 @@ public class ANSIFormatter {
     public String moveCursor(int row, int col) {
         return esc + row + ";" + col + "H";
     }
+
+    public String boldText(String text) {
+        return esc + "1m" + text + esc + "0m";
+    }
 }
