@@ -12,38 +12,28 @@ public class CommandParser {
         switch (splitProcess[0].toUpperCase()) {
             case "ADD":
                 if (splitProcess.length == 4) {
-                    database.addContact(
+                    return database.addContact(
                         splitProcess[1],
                         splitProcess[2],
                         splitProcess[3]
-                    );
-                    return (
-                        splitProcess[1] +
-                        " " +
-                        splitProcess[2] +
-                        " is successfully added!"
                     );
                 } else {
                     return "Usage: ADD <name> <surname> <phonenumber>";
                 }
             case "SEARCH":
                 if (splitProcess.length == 3) {
-                    String result = database.searchContact(
+                    return database.searchContact(
                         splitProcess[1],
                         splitProcess[2]
                     );
-                    return result;
                 } else {
                     return "Usage: SEARCH <name> <surname>";
                 }
             case "DELETE":
                 if (splitProcess.length == 3) {
-                    database.deleteContact(splitProcess[1], splitProcess[2]);
-                    return (
-                        splitProcess[1] +
-                        " " +
-                        splitProcess[2] +
-                        " is successfully deleted!"
+                    return database.deleteContact(
+                        splitProcess[1],
+                        splitProcess[2]
                     );
                 } else {
                     return "Usage: DELETE <name> <surname>";

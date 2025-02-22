@@ -66,26 +66,26 @@ public class FriendDatabase {
     public String addContact(String name, String surname, String phoneNumber) {
         String fullName = name + " " + surname;
         if (storage.containsKey(fullName)) {
-            return "Contact already exists!";
+            return fullName + " already exists!";
         } else {
             storage.put(fullName, phoneNumber);
             saveContacts();
-            return "Contact added successfully!";
+            return fullName + " added successfully!";
         }
     }
 
     public String searchContact(String name, String surname) {
         String fullName = name + " " + surname;
-        return storage.getOrDefault(fullName, "Contact not found!");
+        return storage.getOrDefault(fullName, fullName + " not found!");
     }
 
     public String deleteContact(String name, String surname) {
         String fullName = name + " " + surname;
         if (storage.remove(fullName) != null) {
             saveContacts();
-            return "Contact deleted successfully!";
+            return fullName + " deleted successfully!";
         } else {
-            return "Contact not found!";
+            return fullName + " not found!";
         }
     }
 
