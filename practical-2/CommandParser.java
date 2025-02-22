@@ -27,7 +27,7 @@ public class CommandParser {
                     return "Usage: ADD <name> <surname> <phonenumber>";
                 }
             case "SEARCH":
-                if (splitProcess.length == 3) {
+                if (splitProcess.length == 2) {
                     String result = database.searchContact(
                         splitProcess[1],
                         splitProcess[2]
