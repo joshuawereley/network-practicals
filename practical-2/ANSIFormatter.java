@@ -13,4 +13,8 @@ public class ANSIFormatter {
     public String clearScreen() {
         return esc + "2J";
     }
+
+    public String moveCursor(int row, int col) {
+        return esc + row + ";" + col + "H";
+    }
 }
