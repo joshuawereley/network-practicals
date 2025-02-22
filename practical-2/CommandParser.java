@@ -54,15 +54,15 @@ public class CommandParser {
             case "HELP":
                 String commands = "Available commands:\n";
                 commands +=
-                    "ADD <name> <surname> <phoneNumber>  - Add a new friend";
+                    "ADD <name> <surname> <phoneNumber>  - Add a new friend\n";
                 commands +=
-                    "DELETE <name> <surname>             - Remove a friend";
+                    "DELETE <name> <surname>             - Remove a friend\n";
                 commands +=
-                    "SEARCH <name> <surname>             - Find a friend's phone number";
+                    "SEARCH <name> <surname>             - Find a friend's phone number\n";
                 commands +=
-                    "LIST                                - Show all saved contacts";
+                    "LIST                                - Show all saved contacts\n";
                 commands +=
-                    "EXIT                                - Disconnect from the server";
+                    "EXIT                                - Disconnect from the server\n";
                 return commands;
             case "EXIT":
                 return "Goodbye!";
