@@ -1,43 +1,25 @@
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 public class TelnetServer {
 
-    private Socket s = null;
-    private ServerSocket ss = null;
-    private DataInputStream in = null;
-
     public TelnetServer(int port) {
-        try {
-            ss = new ServerSocket(port);
-            System.out.println("Server has started");
-            System.out.println("Wating for a client ...");
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Server has started on port " + port);
 
-            s = ss.accept();
-            System.out.println("Client accepted");
+            while (true) {
+                Socket socket = serverSocket.accept();
+                InetAddress address = socket.getInetAddress();
+                System.out.println("Client connected: " + address);
 
-            in = new DataInputStream(
-                new BufferedInputStream(s.getInputStream())
-            );
-
-            String m = "";
-
-            while (!m.equals("Over")) {
-                try {
-                    m = in.readUTF();
-                    System.out.println(m);
-                } catch (IOException i) {
-                    System.out.println(i);
-                }
+                ClientHandler clientHandler = new ClientHandler(socket);
+                Thread thread = new Thread(clientHandler);
+                thread.start();
             }
-            System.out.println("Closing connection");
-            s.close();
-            in.close();
-        } catch (IOException i) {
-            System.out.println(i);
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
         }
     }
 
