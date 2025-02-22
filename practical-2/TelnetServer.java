@@ -42,6 +42,6 @@ public class TelnetServer {
     }
 
     public static void main(String[] args) {
-        TelnetServer ts = new TelnetServer(5000);
+        TelnetServer ts = new TelnetServer(23);
     }
 }
