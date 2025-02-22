@@ -75,13 +75,13 @@ public class FriendDatabase {
         return storage.getOrDefault(fullName, "Contact not found!");
     }
 
-    public void deleteContact(String name) {
-        if (storage.isEmpty() || !storage.containsKey(name)) {
-            System.out.println("Contact not found!");
-        } else {
-            storage.remove(name);
+    public String deleteContact(String name, String surname) {
+        String fullName = name + " " + surname;
+        if (storage.remove(fullName) != null) {
             saveContacts();
-            System.out.println("Contact deleted successfully!");
+            return "Contact deleted successfully!";
+        } else {
+            return "Contact not found!";
         }
     }
 
