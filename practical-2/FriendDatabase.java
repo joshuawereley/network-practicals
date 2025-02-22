@@ -59,13 +59,14 @@ public class FriendDatabase {
         }
     }
 
-    public void addContact(String name, String phoneNumber) {
-        if (!storage.containsKey(name)) {
-            System.out.println("Contact already exists!");
+    public String addContact(String name, String surname, String phoneNumber) {
+        String fullName = name + " " + surname;
+        if (!storage.containsKey(fullName)) {
+            return "Contact already exists!";
         } else {
-            storage.put(name, phoneNumber);
+            storage.put(fullName, phoneNumber);
             saveContacts();
-            System.out.println("Contact added successfully!");
+            return "Contact added successfully!";
         }
     }
 
