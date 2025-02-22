@@ -51,7 +51,7 @@ public class CommandParser {
                 commands +=
                     "LIST                                - Show all saved contacts\n";
                 commands +=
-                    "EXIT                                - Disconnect from the server\n";
+                    "EXIT                                - Disconnect from the server";
                 return commands;
             case "EXIT":
                 return "Goodbye!";

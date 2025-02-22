@@ -92,8 +92,12 @@ public class FriendDatabase {
     public String listContacts() {
         if (storage.isEmpty()) return "No contacts available!";
         StringBuilder list = new StringBuilder();
+        int count = 0;
+        int totalEntries = storage.size();
         for (String i : storage.keySet()) {
-            list.append(i).append(": ").append(storage.get(i)).append("\n");
+            list.append(i).append(": ").append(storage.get(i));
+            if (count < totalEntries - 1) list.append("\n");
+            count++;
         }
         return list.toString();
     }
