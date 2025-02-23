@@ -15,6 +15,7 @@ public class FriendDatabase {
     );
     private static final String FILE_NAME = "friends.txt";
     private final HashMap<String, String> storage;
+    private static final String BACKUP_FOLDER = "Backup";
 
     public FriendDatabase() {
         storage = new HashMap<String, String>();
@@ -65,6 +66,7 @@ public class FriendDatabase {
         String surname,
         String phoneNumber
     ) {
+        createBackup();
         String fullName = name + " " + surname;
         if (storage.containsKey(fullName)) {
             return fullName + " already exists!";
@@ -80,6 +82,7 @@ public class FriendDatabase {
     }
 
     public synchronized String deleteContact(String name, String surname) {
+        createBackup();
         String fullName = name + " " + surname;
         if (storage.remove(fullName) != null) {
             saveContacts();
@@ -99,11 +102,19 @@ public class FriendDatabase {
 
     public synchronized void createBackup() {
         try {
+            Files.createDirectories(Paths.get(BACKUP_FOLDER));
+            String backupFileName =
+                BACKUP_FOLDER +
+                "/" +
+                FILE_NAME +
+                ".backup_" +
+                System.currentTimeMillis();
             Files.copy(
                 Paths.get(FILE_NAME),
-                Paths.get(FILE_NAME + ".backup_" + System.currentTimeMillis()),
+                Paths.get(backupFileName),
                 StandardCopyOption.REPLACE_EXISTING
             );
+            logger.info("Backup created successfully: " + backupFileName);
         } catch (IOException e) {
             logger.severe("Error creating backup: " + e.getMessage());
         }
