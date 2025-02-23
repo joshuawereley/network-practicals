@@ -10,9 +10,11 @@ public class ClientHandler implements Runnable {
     private BufferedReader input;
     private PrintWriter output;
     private CommandParser parser;
+    private ANSIFormatter formatter;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
+        formatter = new ANSIFormatter();
         parser = new CommandParser(new FriendDatabase());
     }
 
@@ -24,13 +26,15 @@ public class ClientHandler implements Runnable {
             input = new BufferedReader(isr);
             output = new PrintWriter(socket.getOutputStream(), true);
 
-            output.println("Welcome to the Telnet server!");
+            output.println(
+                formatter.colourText("Welcome to the Telnet server!", "32")
+            );
             output.println("Type HELP for available commands.");
 
             String clientMessage;
             while ((clientMessage = input.readLine()) != null) {
                 if (clientMessage.equalsIgnoreCase("EXIT")) {
-                    output.println("Goodbye!");
+                    output.println(formatter.colourText("Goodbye!", "31"));
                     break;
                 }
                 String response = parser.processCommand(clientMessage);
