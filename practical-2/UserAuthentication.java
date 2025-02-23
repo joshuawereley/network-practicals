@@ -33,4 +33,10 @@ public class UserAuthentication {
             System.err.println("Error loading users: " + e.getMessage() + "\n");
         }
     }
+
+    public boolean authenticate(String username, String password) {
+        return (
+            users.containsKey(username) && users.get(username).equals(password)
+        );
+    }
 }
