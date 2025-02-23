@@ -38,8 +38,8 @@ The project consists of the following classes:
 
 1. **Clone the Repository** (if applicable):
    ```bash
-   git clone <repository-url>
-   cd <repository-folder>
+   git clone https://github.com/joshuawereley/network-practicals.git
+   cd network-practicals/practical-2
    ```
 
 2. **Compile the Code**:
