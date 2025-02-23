@@ -2,6 +2,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -100,5 +103,17 @@ public class FriendDatabase {
             count++;
         }
         return list.toString();
+    }
+
+    public void createBackup() {
+        try {
+            Files.copy(
+                Paths.get(FILE_NAME),
+                Paths.get(FILE_NAME + ".backup_" + System.currentTimeMillis()),
+                StandardCopyOption.REPLACE_EXISTING
+            );
+        } catch (IOException e) {
+            System.err.println("Error creating backup: " + e.getMessage());
+        }
     }
 }
