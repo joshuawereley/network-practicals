@@ -3,52 +3,59 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.logging.Logger;
 
 public class ClientHandler implements Runnable {
 
-    private Socket socket;
-    private BufferedReader input;
-    private PrintWriter output;
-    private CommandParser parser;
-    private ANSIFormatter formatter;
+    private static final Logger logger = Logger.getLogger(
+        ClientHandler.class.getName()
+    );
+    private final Socket socket;
+    private final CommandParser parser;
+    private final ResponseFormatter formatter;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
-        formatter = new ANSIFormatter();
-        parser = new CommandParser(new FriendDatabase());
+        this.formatter = new ResponseFormatter(new ANSIFormatter());
+        this.parser = new CommandParser(new FriendDatabase());
     }
 
+    @Override
     public void run() {
-        try {
-            InputStreamReader isr = new InputStreamReader(
-                socket.getInputStream()
+        try (
+            BufferedReader input = new BufferedReader(
+                new InputStreamReader(socket.getInputStream())
             );
-            input = new BufferedReader(isr);
-            output = new PrintWriter(socket.getOutputStream(), true);
-
+            PrintWriter output = new PrintWriter(socket.getOutputStream(), true)
+        ) {
             output.println(
-                formatter.colourText("Welcome to the Telnet server!", "32")
+                formatter.formatResponse(
+                    "Welcome to the Telnet server!",
+                    Constants.COLOR_SUCCESS
+                )
             );
             output.println("Type HELP for available commands.");
 
             String clientMessage;
             while ((clientMessage = input.readLine()) != null) {
                 if (clientMessage.equalsIgnoreCase("EXIT")) {
-                    output.println(formatter.colourText("Goodbye!", "31"));
+                    output.println(
+                        formatter.formatResponse(
+                            "Goodbye!",
+                            Constants.COLOR_ERROR
+                        )
+                    );
                     break;
                 }
-                String response = parser.processCommand(clientMessage);
-                output.println(response);
+                output.println(parser.processCommand(clientMessage));
             }
         } catch (IOException e) {
-            System.err.println("Client disconnected: " + e.getMessage());
+            logger.severe("Client disconnected: " + e.getMessage());
         } finally {
             try {
-                if (input != null) input.close();
-                if (output != null) output.close();
-                if (socket != null) socket.close();
+                socket.close();
             } catch (IOException e) {
-                System.err.println("Error closing client: " + e.getMessage());
+                logger.severe("Error closing socket: " + e.getMessage());
             }
         }
     }
