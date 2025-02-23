@@ -11,13 +11,11 @@ public class ClientHandler implements Runnable {
     private PrintWriter output;
     private CommandParser parser;
     private ANSIFormatter formatter;
-    private UserAuthentication authenticator;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
         formatter = new ANSIFormatter();
-        authenticator = new UserAuthentication();
-        parser = new CommandParser(new FriendDatabase(), authenticator);
+        parser = new CommandParser(new FriendDatabase());
     }
 
     public void run() {
@@ -31,34 +29,16 @@ public class ClientHandler implements Runnable {
             output.println(
                 formatter.colourText("Welcome to the Telnet server!", "32")
             );
-            output.println("Please log in.");
+            output.println("Type HELP for available commands.");
 
-            output.print("Username: ");
-            String username = input.readLine();
-            output.print("\nPassword: ");
-            String password = input.readLine();
-            output.println("");
-
-            if (authenticator.authenticate(username, password)) {
-                output.println(formatter.colourText("Login successful!", "32"));
-                output.println("Type HELP for available commands.");
-
-                String clientMessage;
-                while ((clientMessage = input.readLine()) != null) {
-                    if (clientMessage.equalsIgnoreCase("EXIT")) {
-                        output.println(formatter.colourText("Goodbye!", "31"));
-                        break;
-                    }
-                    String response = parser.processCommand(clientMessage);
-                    output.println(response);
+            String clientMessage;
+            while ((clientMessage = input.readLine()) != null) {
+                if (clientMessage.equalsIgnoreCase("EXIT")) {
+                    output.println(formatter.colourText("Goodbye!", "31"));
+                    break;
                 }
-            } else {
-                output.println(
-                    formatter.colourText(
-                        "Invalid username or password. Disconnecting...",
-                        "31"
-                    )
-                );
+                String response = parser.processCommand(clientMessage);
+                output.println(response);
             }
         } catch (IOException e) {
             System.err.println("Client disconnected: " + e.getMessage());
