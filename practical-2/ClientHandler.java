@@ -11,11 +11,13 @@ public class ClientHandler implements Runnable {
     private PrintWriter output;
     private CommandParser parser;
     private ANSIFormatter formatter;
+    private UserAuthentication authenticator;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
         formatter = new ANSIFormatter();
         parser = new CommandParser(new FriendDatabase());
+        authenticator = new UserAuthentication();
     }
 
     public void run() {
@@ -29,16 +31,29 @@ public class ClientHandler implements Runnable {
             output.println(
                 formatter.colourText("Welcome to the Telnet server!", "32")
             );
-            output.println("Type HELP for available commands.");
+            output.println("Please log in.");
 
-            String clientMessage;
-            while ((clientMessage = input.readLine()) != null) {
-                if (clientMessage.equalsIgnoreCase("EXIT")) {
-                    output.println(formatter.colourText("Goodbye!", "31"));
-                    break;
+            output.println("Username: ");
+            String username = input.readLine();
+            output.println("Password: ");
+            String password = input.readLine();
+
+            if (authenticator.authenticate(username, password)) {
+                output.println("Type HELP for available commands.");
+
+                String clientMessage;
+                while ((clientMessage = input.readLine()) != null) {
+                    if (clientMessage.equalsIgnoreCase("EXIT")) {
+                        output.println(formatter.colourText("Goodbye!", "31"));
+                        break;
+                    }
+                    String response = parser.processCommand(clientMessage);
+                    output.println(response);
                 }
-                String response = parser.processCommand(clientMessage);
-                output.println(response);
+            } else {
+                output.println(
+                    "Invalid username or password. Disconnecting..."
+                );
             }
         } catch (IOException e) {
             System.err.println("Client disconnected: " + e.getMessage());
