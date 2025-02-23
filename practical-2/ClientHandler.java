@@ -16,8 +16,8 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket socket) {
         this.socket = socket;
         formatter = new ANSIFormatter();
-        parser = new CommandParser(new FriendDatabase());
         authenticator = new UserAuthentication();
+        parser = new CommandParser(new FriendDatabase(), authenticator);
     }
 
     public void run() {
@@ -33,12 +33,14 @@ public class ClientHandler implements Runnable {
             );
             output.println("Please log in.");
 
-            output.println("Username: ");
+            output.print("Username: ");
             String username = input.readLine();
-            output.println("Password: ");
+            output.print("\nPassword: ");
             String password = input.readLine();
+            output.println("");
 
             if (authenticator.authenticate(username, password)) {
+                output.println(formatter.colourText("Login successful!", "32"));
                 output.println("Type HELP for available commands.");
 
                 String clientMessage;
@@ -52,7 +54,10 @@ public class ClientHandler implements Runnable {
                 }
             } else {
                 output.println(
-                    "Invalid username or password. Disconnecting..."
+                    formatter.colourText(
+                        "Invalid username or password. Disconnecting...",
+                        "31"
+                    )
                 );
             }
         } catch (IOException e) {
