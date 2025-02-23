@@ -2,16 +2,33 @@ public class CommandParser {
 
     private FriendDatabase database;
     private ANSIFormatter formatter;
+    private UserAuthentication authenticator;
 
-    public CommandParser(FriendDatabase database) {
+    public CommandParser(
+        FriendDatabase database,
+        UserAuthentication authenticator
+    ) {
         this.database = database;
         formatter = new ANSIFormatter();
+        this.authenticator = authenticator;
     }
 
     public String processCommand(String command) {
         String[] splitProcess = command.split(" ");
         if (splitProcess.length == 0) return "Invalid command!";
         switch (splitProcess[0].toUpperCase()) {
+            case "REGISTER":
+                if (splitProcess.length == 3) {
+                    String username = splitProcess[1];
+                    String password = splitProcess[2];
+                    authenticator.addUser(username, password);
+                    return formatter.colourText(
+                        "User registered successfully!",
+                        "32"
+                    );
+                } else {
+                    return "Usage: REGISTER <username> <password>";
+                }
             case "ADD":
                 if (splitProcess.length == 4) {
                     return formatter.colourText(
@@ -54,15 +71,17 @@ public class CommandParser {
             case "HELP":
                 String commands = "Available commands:\n";
                 commands +=
-                    "ADD <name> <surname> <phoneNumber>  - Add a new friend\n";
+                    "REGISTER <username> <password> - Register a new user\n";
                 commands +=
-                    "DELETE <name> <surname>             - Remove a friend\n";
+                    "ADD <name> <surname> <phoneNumber>     - Add a new friend\n";
                 commands +=
-                    "SEARCH <name> <surname>             - Find a friend's phone number\n";
+                    "DELETE <name> <surname>                - Remove a friend\n";
                 commands +=
-                    "LIST                                - Show all saved contacts\n";
+                    "SEARCH <name> <surname>                - Find a friend's phone number\n";
                 commands +=
-                    "EXIT                                - Disconnect from the server";
+                    "LIST                                   - Show all saved contacts\n";
+                commands +=
+                    "EXIT                                   - Disconnect from the server";
                 return formatter.colourText(commands, "36");
             case "EXIT":
                 return "Goodbye!";
