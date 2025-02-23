@@ -71,6 +71,7 @@ public class FriendDatabase {
         String surname,
         String phoneNumber
     ) {
+        createBackup();
         String fullName = name + " " + surname;
         if (storage.containsKey(fullName)) {
             return fullName + " already exists!";
@@ -87,6 +88,7 @@ public class FriendDatabase {
     }
 
     public synchronized String deleteContact(String name, String surname) {
+        createBackup();
         String fullName = name + " " + surname;
         if (storage.remove(fullName) != null) {
             saveContacts();
