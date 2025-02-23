@@ -18,7 +18,7 @@ public class FriendDatabase {
         loadContacts();
     }
 
-    public void loadContacts() {
+    public synchronized void loadContacts() {
         try {
             File file = new File(FILE_NAME);
             Scanner reader = new Scanner(file);
@@ -41,7 +41,7 @@ public class FriendDatabase {
         }
     }
 
-    public void saveContacts() {
+    public synchronized void saveContacts() {
         try {
             File file = new File(FILE_NAME);
             FileWriter fileWriter = new FileWriter(file);
@@ -66,7 +66,11 @@ public class FriendDatabase {
         }
     }
 
-    public String addContact(String name, String surname, String phoneNumber) {
+    public synchronized String addContact(
+        String name,
+        String surname,
+        String phoneNumber
+    ) {
         String fullName = name + " " + surname;
         if (storage.containsKey(fullName)) {
             return fullName + " already exists!";
@@ -77,12 +81,12 @@ public class FriendDatabase {
         }
     }
 
-    public String searchContact(String name, String surname) {
+    public synchronized String searchContact(String name, String surname) {
         String fullName = name + " " + surname;
         return storage.getOrDefault(fullName, fullName + " not found!");
     }
 
-    public String deleteContact(String name, String surname) {
+    public synchronized String deleteContact(String name, String surname) {
         String fullName = name + " " + surname;
         if (storage.remove(fullName) != null) {
             saveContacts();
@@ -92,7 +96,7 @@ public class FriendDatabase {
         }
     }
 
-    public String listContacts() {
+    public synchronized String listContacts() {
         if (storage.isEmpty()) return "No contacts available!";
         StringBuilder list = new StringBuilder();
         int count = 0;
@@ -105,7 +109,7 @@ public class FriendDatabase {
         return list.toString();
     }
 
-    public void createBackup() {
+    public synchronized void createBackup() {
         try {
             Files.copy(
                 Paths.get(FILE_NAME),
