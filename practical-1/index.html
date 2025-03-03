@@ -2,8 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Time Zone Display</title>
+        <title>Time Zone Application</title>
         <style>
             body {
                 font-family: Arial, sans-serif;
@@ -13,32 +12,34 @@
             h1 {
                 color: #333;
             }
-            .content {
-                max-width: 600px;
+            .container {
+                max-width: 800px;
                 margin: 0 auto;
             }
-            .btn {
+            .button {
                 display: inline-block;
-                padding: 10px 15px;
                 background-color: #4caf50;
                 color: white;
+                padding: 10px 20px;
                 text-decoration: none;
                 border-radius: 4px;
+                margin-top: 20px;
             }
-            .btn:hover {
+            .button:hover {
                 background-color: #45a049;
             }
         </style>
     </head>
     <body>
-        <div class="content">
+        <div class="container">
             <h1>Time Zone Display Application</h1>
             <p>
-                Welcome to the Time Zone Display Application. This application
-                allows you to view the current time in different time zones.
+                This application shows the current time in different time zones.
             </p>
-            <p>Click the button below to view the current time:</p>
-            <a href="/cgi-bin/DisplayTime.cgi" class="btn">View Current Time</a>
+            <p>Click the button below to view the current time.</p>
+            <a href="/cgi-bin/display_time.cgi" class="button"
+                >Display Current Time</a
+            >
         </div>
     </body>
 </html>
