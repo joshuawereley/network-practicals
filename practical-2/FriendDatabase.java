@@ -10,26 +10,25 @@ import java.util.logging.Logger;
 
 public class FriendDatabase {
 
-    private static final Logger logger = Logger.getLogger(
-        FriendDatabase.class.getName()
-    );
+    private static final Logger logger = Logger.getLogger(FriendDatabase.class.getName());
     private static final String FILE_NAME = "friends.txt";
     private final HashMap<String, String> storage;
+    private final HashMap<String, String> users; // Store usernames and passwords
     private static final String BACKUP_FOLDER = "Backup";
 
     public FriendDatabase() {
-        storage = new HashMap<String, String>();
+        storage = new HashMap<>();
+        users = new HashMap<>();
         loadContacts();
+        loadUsers();
     }
 
     public synchronized void loadContacts() {
         try (Scanner reader = new Scanner(new File(FILE_NAME))) {
             while (reader.hasNextLine()) {
-                String[] splitData = reader.nextLine().split(",");
-                if (splitData.length == 3) {
-                    String fullName =
-                        splitData[0].trim() + " " + splitData[1].trim();
-                    storage.put(fullName, splitData[2].trim());
+                String[] contact = reader.nextLine().split(",");
+                if (contact.length == 3) {
+                    storage.put(contact[0] + " " + contact[1], contact[2]);
                 }
             }
         } catch (IOException e) {
@@ -37,35 +36,28 @@ public class FriendDatabase {
         }
     }
 
+    // Load users from a file (implement this method)
+    private void loadUsers() {
+        // Load users from a file or database
+    }
+
+    // Save users to a file (implement this method)
+    private void saveUsers() {
+        // Save users to a file or database
+    }
+
     public synchronized void saveContacts() {
         try (FileWriter fileWriter = new FileWriter(FILE_NAME)) {
             for (String fullName : storage.keySet()) {
-                String[] nameParts = fullName.split(" ", 2);
-                if (nameParts.length == 2) {
-                    fileWriter.write(
-                        nameParts[0] +
-                        "," +
-                        nameParts[1] +
-                        "," +
-                        storage.get(fullName) +
-                        "\n"
-                    );
-                } else {
-                    logger.warning(
-                        "Invalid name format in database: " + fullName
-                    );
-                }
+                String[] nameParts = fullName.split(" ");
+                fileWriter.write(nameParts[0] + "," + nameParts[1] + "," + storage.get(fullName) + "\n");
             }
         } catch (IOException e) {
             logger.severe("Error saving database: " + e.getMessage());
         }
     }
 
-    public synchronized String addContact(
-        String name,
-        String surname,
-        String phoneNumber
-    ) {
+    public synchronized String addContact(String name, String surname, String phoneNumber) {
         createBackup();
         String fullName = name + " " + surname;
         if (storage.containsKey(fullName)) {
@@ -94,29 +86,32 @@ public class FriendDatabase {
     public synchronized String listContacts() {
         if (storage.isEmpty()) return "No contacts available!";
         StringBuilder list = new StringBuilder();
-        storage.forEach((key, value) ->
-            list.append(key).append(": ").append(value).append("\n")
-        );
+        storage.forEach((key, value) -> list.append(key).append(": ").append(value).append("\n"));
         return list.toString();
     }
 
     public synchronized void createBackup() {
         try {
             Files.createDirectories(Paths.get(BACKUP_FOLDER));
-            String backupFileName =
-                BACKUP_FOLDER +
-                "/" +
-                FILE_NAME +
-                ".backup_" +
-                System.currentTimeMillis();
-            Files.copy(
-                Paths.get(FILE_NAME),
-                Paths.get(backupFileName),
-                StandardCopyOption.REPLACE_EXISTING
-            );
-            logger.info("Backup created successfully: " + backupFileName);
+            Files.copy(Paths.get(FILE_NAME), Paths.get(BACKUP_FOLDER, FILE_NAME + "_" + System.currentTimeMillis()), StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             logger.severe("Error creating backup: " + e.getMessage());
         }
+    }
+
+    public synchronized String registerUser(String username, String password) {
+        if (users.containsKey(username)) {
+            return "Username already exists!";
+        }
+        users.put(username, password);
+        saveUsers();
+        return "User registered successfully!";
+    }
+
+    public synchronized String loginUser(String username, String password) {
+        if (users.containsKey(username) && users.get(username).equals(password)) {
+            return "Login successful!";
+        }
+        return "Invalid username or password!";
     }
 }
