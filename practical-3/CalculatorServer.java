@@ -6,7 +6,7 @@ import java.util.logging.Logger;
 public class CalculatorServer {
 
     private static final Logger logger = Logger.getLogger(CalculatorServer.class.getName());
-    private static final int PORT = 55555;
+    private static final int PORT = 55554;
     private static CalculatorState calculatorState = new CalculatorState();
 
     public static void main(String[] args) {
