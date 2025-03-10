@@ -20,7 +20,6 @@ public class FriendDatabase {
         storage = new HashMap<>();
         users = new HashMap<>();
         loadContacts();
-        loadUsers();
     }
 
     public synchronized void loadContacts() {
@@ -94,7 +93,7 @@ public class FriendDatabase {
             return "Username already exists!";
         }
         users.put(username, password);
-        saveUsers();
+        saveContacts();
         return "User registered successfully!";
     }
 
