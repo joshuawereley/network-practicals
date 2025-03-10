@@ -1,0 +1,54 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*' # This triggers the workflow on version tags like v1.0, v2.1, etc.
+  workflow_dispatch:
+    inputs:
+      practical:
+        description: 'Practical directory to zip (e.g., practical-1, practical-2, practical-3)'
+        required: true
+        default: 'practical-3'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+
+      - name: Compile Java files
+        run: |
+          javac ${{ github.event.inputs.practical }}/CalculatorServer.java ${{ github.event.inputs.practical }}/CalculatorState.java
+
+      - name: Create zip file
+        run: |
+          zip -r ${{ github.event.inputs.practical }}.zip ${{ github.event.inputs.practical }}
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ github.event.inputs.practical }}.zip
+          asset_name: ${{ github.event.inputs.practical }}.zip
+          asset_content_type: application/zip
