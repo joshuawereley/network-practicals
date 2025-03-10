@@ -13,7 +13,7 @@ public class FriendDatabase {
     private static final Logger logger = Logger.getLogger(FriendDatabase.class.getName());
     private static final String FILE_NAME = "friends.txt";
     private final HashMap<String, String> storage;
-    private final HashMap<String, String> users; // Store usernames and passwords
+    private final HashMap<String, String> users;
     private static final String BACKUP_FOLDER = "Backup";
 
     public FriendDatabase() {
@@ -34,16 +34,6 @@ public class FriendDatabase {
         } catch (IOException e) {
             logger.severe("Error loading database: " + e.getMessage());
         }
-    }
-
-    // Load users from a file (implement this method)
-    private void loadUsers() {
-        // Load users from a file or database
-    }
-
-    // Save users to a file (implement this method)
-    private void saveUsers() {
-        // Save users to a file or database
     }
 
     public synchronized void saveContacts() {
