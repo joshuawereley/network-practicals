@@ -17,4 +17,13 @@ public class ContactManager {
     if (!name.isEmpty() && contacts.containsKey(name))
       return contacts.get(name);
     return null;
+  }
+
+  public boolean deleteContact(String name) {
+    if (!name.isEmpty() && contacts.containsKey(name)) {
+      contacts.remove(name);
+      return true;
+    }
+    return false;
+  }
 }
