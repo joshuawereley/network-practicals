@@ -9,6 +9,7 @@ public class ContactManager {
   }
 
   public void addContact(String name, String number) {
-    contacts.put(name, number);
+    if (!name.isEmpty() && !number.isEmpty())
+      contacts.put(name, number);
   }
 }
