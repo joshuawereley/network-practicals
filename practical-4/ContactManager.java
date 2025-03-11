@@ -7,4 +7,8 @@ public class ContactManager {
   public ContactManager() {
     contacts = new HashMap<String, String>();
   }
+
+  public void addContact(String name, String number) {
+    contacts.put(name, number);
+  }
 }
