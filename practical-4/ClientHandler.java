@@ -33,6 +33,7 @@ public class ClientHandler implements Runnable {
       String method = tokens[0];
       String path = tokens[1];
       HasMap<String, String> parameters = parseQueryParameters(path);
+      String response = getResponse(path, parameters);
     } catch(IOException e) {
       e.printStackTrace();
     }
@@ -52,5 +53,40 @@ public class ClientHandler implements Runnable {
 
     return hashMap;
   } 
+
+  public String getResponse(String path, HashMap<String, String> parameters) {
+    String httpResponse = "<html><body><h1>";
+    String name = parameters.get("name");
+    String number;
+    if (path.startsWith("/addContact") {
+      number = parameters.get("number");
+      if (name != null && number != null) {
+        contactManager.addContact(name, number);
+        httpResponse += "Contact added: " + name;
+      } else {
+        httpResponse += "Missing parameters";
+      }
+    } else if (path.startsWith("/searchContact") {
+      number = contactManager.getContact(name);
+      if (number != null) {
+        httpResponse += "Number: " + number;
+      } else {
+        httpResponse += "Contact not found";
+      }
+    } else if (path.startsWith("/deleteContact")) {
+      boolean success = contactManager.deleteContact("name");
+      if (success) {
+        httpResponse += "Contact deleted: ";
+      } else {
+        httpResponse += "Contact not found";
+      }
+    } else if (path.equals("/index.html")) {
+      httpResponse += serveFile("index.html");
+    } else {
+      httpResponse += "404 Not Found";
+    }
+    httpResponse += "</html></body></h1>";
+    return httpResponse;
+  }
 
 }
