@@ -45,6 +45,8 @@ public class CalculatorState {
         Stack<String> operators = new Stack<>();
 
         for (String token : tokens) {
+            if (token.isEmpty()) continue;
+            
             if (token.matches("\\d+")) {
                 values.push(Double.parseDouble(token));
             } else if (token.matches("[+\\-*/]")) {
@@ -53,10 +55,7 @@ public class CalculatorState {
                 }
                 operators.push(token);
             } else {
-                if (token == null || token.isEmpty()) {
-                    values.push(0.0);
-                }
-                else throw new IllegalArgumentException("Invalid token: " + token);
+                throw new IllegalArgumentException("Invalid token: " + token);
             }
         }
 
@@ -64,11 +63,18 @@ public class CalculatorState {
             values.push(applyOperator(operators.pop(), values.pop(), values.pop()));
         }
 
-        if (values.size() != 1) {
-            throw new IllegalStateException("Invalid expression: " + expr);
+        if (values.isEmpty()) {
+            return "";
         }
-
-        return values.pop().toString();
+        
+        double result = values.pop();
+        
+        // If result is a whole number, remove the decimal point
+        if (result == Math.floor(result)) {
+            return Integer.toString((int) result);
+        }
+        
+        return Double.toString(result);
     }
 
     private boolean hasPrecedence(String op1, String op2) {

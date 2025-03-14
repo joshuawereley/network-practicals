@@ -1,10 +1,15 @@
-# Calculator Server
+# Calculator Server with History Logging
 
-This project is a simple calculator server implemented in Java. The server listens on port 55555 and provides a web-based calculator interface.
+This project implements a web-based calculator system with two servers:
+
+1. A calculator server on port 55554 that processes calculations
+2. A logging server on port 55556 that stores and displays calculation history
+
+This demonstrates HTTP protocol features including server-to-server communication, proper request/response handling, and content display.
 
 ## Prerequisites
 
-- Java Development Kit (JDK) installed
+- Java Development Kit (JDK) 8 or higher
 - A web browser
 
 ## Instructions
@@ -21,7 +26,7 @@ This project is a simple calculator server implemented in Java. The server liste
    Open a terminal or command prompt and navigate to the `practical-3` directory. Then run the following command to compile the Java files:
 
    ```sh
-   javac CalculatorServer.java CalculatorState.java
+   javac Calculation.java CalculatorState.java CalculatorServer.java LoggingServer.java
    ```
 
 3. **Run the server**:
@@ -32,9 +37,13 @@ This project is a simple calculator server implemented in Java. The server liste
    java CalculatorServer
    ```
 
+   Open another terminal window and run
+   java LoggingServer
+
 4. **Access the calculator**:
 
-   Open a web browser and navigate to `http://localhost:55555`. You should see the calculator interface.
+   Open a web browser and navigate to `http://localhost:55554`. You should see the calculator interface.
+   Open a web browser and navigate to `http://localhost:55556`. You should see the calculator history.
 
 5. **Using the calculator**:
 

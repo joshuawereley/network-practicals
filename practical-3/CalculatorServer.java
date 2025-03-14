@@ -2,16 +2,20 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
+import java.util.Map;
+import java.util.HashMap;
 
 public class CalculatorServer {
 
     private static final Logger logger = Logger.getLogger(CalculatorServer.class.getName());
     private static final int PORT = 55554;
+    private static final String LOGGING_SERVER = "localhost";
+    private static final int LOGGING_PORT = 55556;
     private static CalculatorState calculatorState = new CalculatorState();
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            logger.info("Server started on port " + PORT);
+            logger.info("Calculator Server started on port " + PORT);
             while (true) {
                 try (Socket clientSocket = serverSocket.accept()) {
                     handleClient(clientSocket);
@@ -27,23 +31,62 @@ public class CalculatorServer {
         PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
         String requestLine = in.readLine();
-        if (requestLine != null && requestLine.startsWith("GET")) {
-            String response = processRequest(requestLine);
-            out.print(response);
-            out.flush();
+        if (requestLine == null) {
+            sendErrorResponse(out, 400, "Bad Request");
+            return;
+        }
+
+        String[] requestParts = requestLine.split(" ");
+        if (requestParts.length < 3) {
+            sendErrorResponse(out, 400, "Bad Request");
+            return;
+        }
+
+        String method = requestParts[0];
+        String path = requestParts[1];
+        
+        // Parse headers
+        Map<String, String> headers = parseHeaders(in);
+        
+        // Handle HTTP methods
+        if (method.equals("GET")) {
+            processGetRequest(out, path);
+        } else {
+            sendErrorResponse(out, 405, "Method Not Allowed");
         }
     }
 
-    private static String processRequest(String requestLine) {
-        String[] parts = requestLine.split(" ");
-        if (parts.length > 1) {
-            String query = parts[1].substring(1); // Remove leading "/"
-            updateCalculatorState(query);
+    private static Map<String, String> parseHeaders(BufferedReader in) throws IOException {
+        Map<String, String> headers = new HashMap<>();
+        String line;
+        while ((line = in.readLine()) != null && !line.isEmpty()) {
+            int colonPos = line.indexOf(':');
+            if (colonPos > 0) {
+                String headerName = line.substring(0, colonPos).trim();
+                String headerValue = line.substring(colonPos + 1).trim();
+                headers.put(headerName, headerValue);
+            }
         }
-        return generateHtmlResponse();
+        return headers;
     }
 
-    private static void updateCalculatorState(String query) {
+    private static void processGetRequest(PrintWriter out, String path) {
+        if (path.startsWith("/?")) {
+            String query = path.substring(2);
+            boolean evaluated = updateCalculatorState(query);
+            
+            // If we evaluated an expression, log it
+            if (evaluated) {
+                logCalculation(calculatorState.getExpression(), calculatorState.getResult());
+            }
+        }
+        
+        out.print(generateHtmlResponse());
+        out.flush();
+    }
+
+    private static boolean updateCalculatorState(String query) {
+        boolean evaluated = false;
         String[] params = query.split("&");
         for (String param : params) {
             String[] keyValue = param.split("=");
@@ -60,12 +103,41 @@ public class CalculatorServer {
                     case "action":
                         if ("=".equals(value)) {
                             calculatorState.evaluate();
+                            evaluated = true;
                         } else if ("C".equals(value)) {
                             calculatorState.clear();
                         }
                         break;
                 }
             }
+        }
+        return evaluated;
+    }
+
+    private static void logCalculation(String expression, String result) {
+        try (Socket socket = new Socket(LOGGING_SERVER, LOGGING_PORT);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+            
+            String requestBody = "expression=" + URLEncoder.encode(expression, StandardCharsets.UTF_8) + 
+                               "&result=" + URLEncoder.encode(result, StandardCharsets.UTF_8);
+            
+            // Send HTTP POST request to logging server
+            out.println("POST / HTTP/1.1");
+            out.println("Host: " + LOGGING_SERVER);
+            out.println("Content-Type: application/x-www-form-urlencoded");
+            out.println("Content-Length: " + requestBody.length());
+            out.println();
+            out.print(requestBody);
+            out.flush();
+            
+            // Read response (but we don't need to do anything with it)
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            while (in.readLine() != null && !in.readLine().isEmpty()) {
+                // Skip headers
+            }
+            
+        } catch (IOException e) {
+            logger.warning("Failed to log calculation: " + e.getMessage());
         }
     }
 
@@ -80,6 +152,8 @@ public class CalculatorServer {
         html.append(".calculator input[type='text'] { width: 100%; padding: 10px; margin-bottom: 10px; font-size: 18px; border: 1px solid #ccc; border-radius: 5px; }");
         html.append(".calculator button { width: 23%; padding: 10px; margin: 1%; font-size: 18px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; cursor: pointer; }");
         html.append(".calculator button:hover { background-color: #e9e9e9; }");
+        html.append(".history-button { display: block; width: 100%; margin-top: 15px; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; text-align: center; text-decoration: none; font-size: 16px; }");
+        html.append(".history-button:hover { background-color: #45a049; }");
         html.append("</style></head><body>");
         html.append("<div class=\"calculator\">");
         html.append("<h1>Calculator</h1>");
@@ -107,6 +181,7 @@ public class CalculatorServer {
         html.append("<button type=\"submit\" name=\"action\" value=\"=\">=</button>");
         html.append("<button type=\"submit\" name=\"action\" value=\"C\">C</button>");
         html.append("</form>");
+        html.append("<a href=\"http://localhost:55556\" class=\"history-button\"> History</a>");
         html.append("</div>");
         html.append("</body></html>");
 
@@ -122,6 +197,14 @@ public class CalculatorServer {
                     .replace(">", "&gt;")
                     .replace("\"", "&quot;")
                     .replace("'", "&#39;");
+    }
+
+    private static void sendErrorResponse(PrintWriter out, int statusCode, String message) {
+        out.print("HTTP/1.1 " + statusCode + " " + message + "\r\n");
+        out.print("Content-Type: text/html\r\n");
+        out.print("\r\n");
+        out.print("<html><body><h1>" + statusCode + " " + message + "</h1></body></html>");
+        out.flush();
     }
 }
 
