@@ -12,7 +12,8 @@ public class SimpleHTTPServer {
       System.out.println("Server is running on port " + PORT);
       while (true) {
         Socket clientSocket = serverSocket.accept();
-        ClientHandler clientHandler = new ClientHandler(clientSocket);
+        ClientHandler clientHandler = new ClientHandler(clientSocket, contactManager);
+        Thread thread = new Thread(clientHandler).start();
       }
     } catch (IOException e) {
       e.printStackTrace();
