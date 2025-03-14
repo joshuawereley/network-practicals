@@ -22,15 +22,17 @@ public class ClientHandler implements Runnable {
       BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
       OutputStream outputStream = socket.getOutputStream();
       String line = bufferedReader.readLine();
-      if (line != null && !line.isEmpty() {
-        System.out.println("Received: " + line);
-        String[] tokens = line.split(" ");
-        if (tokens.length >= 2) {
-          String method = tokens[0];
-          String path = tokens[1];
-          HasMap<String, String> parameters = parseQueryParameters(path);
-        }
-      }
+      if (line == null && line.isEmpty() 
+        return;
+
+      System.out.println("Received: " + line);
+      String[] tokens = line.split(" ");
+      if (tokens.length < 2)
+        return;
+
+      String method = tokens[0];
+      String path = tokens[1];
+      HasMap<String, String> parameters = parseQueryParameters(path);
     } catch(IOException e) {
       e.printStackTrace();
     }
