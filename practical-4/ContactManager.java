@@ -3,9 +3,11 @@ import java.util.HashMap;
 public class ContactManager {
 
   private HashMap<String, String> contacts;
+  private HashMap<String, byte[]> contactImages;
 
   public ContactManager() {
     contacts = new HashMap<String, String>();
+    contactImages = new HashMap<String, byte[]>();
   }
 
   public void addContact(String name, String number) {
