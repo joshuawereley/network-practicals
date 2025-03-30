@@ -1,45 +1,34 @@
-public class Contact {
-  private String name;
-  private String surname;
-  private String number;
-  private byte[] image;
+import java.io.Serializable;
 
-  public Contact(String name, String surname, String number, byte[] image) {
-    this.name = name;
-    this.surname = surname;
-    this.number = number;
-    this.image = image;
-  }
+public class Contact implements Serializable {
 
-  public String getName() {
-    return name;
-  }
+    private static final long serialVersionUID = 1L;
 
-  public void setName(String name) {
-    this.name = name;
-  }
+    private final String name;
+    private final String surname;
+    private final String number;
+    private final byte[] image;
 
-  public String getSurname() {
-    return surname;
-  }
+    public Contact(String name, String surname, String number, byte[] image) {
+        this.name = name;
+        this.surname = surname;
+        this.number = number;
+        this.image = image;
+    }
 
-  public void setSurname(String surname) {
-    this.surname = surname;
-  }
+    public String getName() {
+        return name;
+    }
 
-  public String getNumber() {
-    return number;
-  }
+    public String getSurname() {
+        return surname;
+    }
 
-  public void setNumber(String number) {
-    this.number = number;
-  }
+    public String getNumber() {
+        return number;
+    }
 
-  public byte[] getImage() {
-    return image;
-  }
-
-  public void setImage(byte[] image) {
-    this.image = image;
-  }
+    public byte[] getImage() {
+        return image;
+    }
 }
