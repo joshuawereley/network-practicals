@@ -93,4 +93,10 @@ public class POP3ClientService {
       readServerResponse();
     }
   }
+
+  public void disconnect() {
+    sendCommand("QUIT");
+    readServerResponse();
+    socket.close();
+  }
 }
