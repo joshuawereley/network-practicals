@@ -1,3 +1,5 @@
+import java.util
+
 public class POP3ClientApp {
   private String server;
   private String port;
@@ -14,6 +16,29 @@ public class POP3ClientApp {
       this.password = password;
       pop3ClientService = new POP3ClientService(this.server, this.port);
       emailListView = new EmailListView();
+    }
+  }
+
+  public void connectAndFetchEmails() {
+    try {
+      String status = pop3ClientService.login(username, password);
+      if (status == "SUCCESS") {
+        List<String> emailList = pop3ClientService.fetchEmailMetaData();
+        emailListView.displayEmails(emailList);
+        List<String> markedForDeletion = emailListView.getMarkedEmails();
+        if (markedForDeletion != null) {
+          pop3ClientService.deleteEmails(markedForDeletion);
+          emailListView.showMessage("Emails deleted successfully.");
+        } else {
+          emailListView.showMessage("No emails selected.");
+        }
+      } else {
+        emailListView.showError("Login failed. Check credentials.");
+      }
+    } catch (NetworkException e) {
+      emailListView.showError("Connection error: " + e.message())
+    } finally {
+      pop3ClientService.disconnect();
     }
   }
 
