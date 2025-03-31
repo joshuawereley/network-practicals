@@ -33,4 +33,57 @@ public class POP3ClientService {
     output.write(command + "\r\n");
     output.flush();
   }
+
+  public List<EmailMetaData> fetchEmailMetadata() {
+    sendCommand("LIST");
+    List<String> response = readMultilineResponse();
+    Map<Integer, Integer> emailIdsAndSizes = parseListResponse(response);
+    List<EmailMetaData> emails = new List<EmailMetaData>();
+    for (Map.Entry<Integer, Integer> entry : emailIdsAndSizes.entrySet()) {
+      int id = entry.getKey();
+      int size = entry.getValue();
+
+      sendCommand("TOP" + id + " 0");
+      List<String> headers = readMultilineResponse();
+
+      String sender = extractHeader(headers, "From:");
+      String subject = extractHeader(headers, "Subject:");
+      EmailMetaData emailMetaData = new EmailMetaData(id, sender, subject, size);
+      emails.add(emailMetaData);
+    }
+    return emails;
+  }
+
+  public List<String> readMultilineResponse() {
+    List<String> lines = new List<String>();
+    while (String line = input.readLine() != ".") {
+      lines.add(line);
+    }
+    return lines;
+  }
+
+  public Map<Integer, Integer> parseListResponse(List<String> listResponse) {
+    Map<Integer, Integer> emailIdsAndSizes = new HashMap<Integer, Integer>();
+    for (String line : listResponse) {
+      if (line.equals(".") || !Character.isDigit(line.charAt(0))) {
+        continue;
+      }
+      String[] parts = line.split(" ");
+      if (parts.length >= 2) {
+        int id = Integer.parseInt(parts[0]);
+        int size = Integer.parseInt(parts[1]);
+        emailIdsAndSizes.put(id, size);
+      }
+    }
+    return emailIdsAndSizes;
+  }
+  
+  public String extractHeader(List<String> headers, String headerName) {
+    for (String line : headers) {
+      if (line.startsWith(headerName)) {
+        return line.substring(headerName.length()).trim();
+      }
+    }
+    return "";
+  }
 }
