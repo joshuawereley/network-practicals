@@ -9,5 +9,11 @@ public class POP3ClientService {
       InputStreamReader isr = new InputStreamReader(socket.getInputStream());
       this.input = new BufferedReader(isr);
       this.output = new OutputStreamWriter(socket.getOutputStream());
+      readServerResponse();
     }
+  }
+
+  public String readServerResponse() {
+    return intput.readLine();
+  }
 }
