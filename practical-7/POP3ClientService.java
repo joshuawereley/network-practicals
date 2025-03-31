@@ -86,4 +86,11 @@ public class POP3ClientService {
     }
     return "";
   }
+
+  public void deleteEmails(List<Integers> ids) {
+    for (int id : ids) {
+      sendCommand("DELE " + id);
+      readServerResponse();
+    }
+  }
 }
