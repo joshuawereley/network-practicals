@@ -1,4 +1,4 @@
-import java.util
+import java.net.ConnectionException;
 
 public class POP3ClientApp {
   private String server;
@@ -41,6 +41,5 @@ public class POP3ClientApp {
       pop3ClientService.disconnect();
     }
   }
-
 
 }

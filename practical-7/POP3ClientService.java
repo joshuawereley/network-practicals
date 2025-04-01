@@ -1,3 +1,10 @@
+import java.net.Socket;
+import java.io.BufferedReader;
+import java.io.OutputStreamWriter;
+import java.util.Map;
+import java.util.List;
+import java.util.HashMap;
+
 public class POP3ClientService {
   private Socket socket;
   private BufferedReader input;
