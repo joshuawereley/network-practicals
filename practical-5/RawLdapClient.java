@@ -121,6 +121,9 @@ public class RawLdapClient {
     private static byte[] createSearchRequest(String name) {
         String baseDN = "ou=friends,dc=mycompany,dc=com";
 
+        // Convert the name to lowercase for case-insensitive search
+        name = name.toLowerCase();
+
         // Build filter (cn=name) - search by the friend's name
         byte[] cnAttr = encodeOctetString("cn".getBytes());
         byte[] nameValue = encodeOctetString(name.getBytes());
@@ -349,50 +352,32 @@ public class RawLdapClient {
 
     // Method to create an LDAP Remove Request
     private static byte[] createRemoveRequest(String name) {
-        // Escape spaces and special characters in the name for LDAP DN
-        String escapedName = escapeLdapDN(name);
-        String dn = "cn=" + escapedName + ",ou=friends,dc=mycompany,dc=com";
+        // For delete operations, we need to be exact with the DN
+        String dn = "cn=" + name + ",ou=friends,dc=mycompany,dc=com";
         
+        // Debug output
         System.out.println("Creating delete request for: " + dn);
         
-        // Build Delete Request with the entry's DN
+        // Create a standard LDAP Delete Request
+        // 1. Create the message ID
+        byte[] messageIdBytes = encodeInteger(messageId++);
+        
+        // 2. Create the LDAP DeleteRequest operation
+        // The delete request is simply an OCTET STRING containing the DN
         byte[] dnBytes = encodeOctetString(dn.getBytes());
         
-        // Delete Request only needs the DN (APPLICATION[10])
-        byte[] deleteRequest = encodeSequence((byte) 0x4A, dnBytes); // 0x4A = DelRequest
+        // 3. Create the Delete Request PDU (APPLICATION[10])
+        byte[] deleteRequest = new byte[dnBytes.length + 2];
+        deleteRequest[0] = (byte)0x4A;  // DelRequest tag
+        deleteRequest[1] = (byte)(dnBytes.length - 2);  // Length of content (subtract tag and length bytes)
+        System.arraycopy(dnBytes, 2, deleteRequest, 2, dnBytes.length - 2);  // Copy just the DN content
         
-        // Build complete LDAP message with message ID
-        byte[] messageIdBytes = encodeInteger(messageId++);
-        byte[] ldapMessage = combineArrays(messageIdBytes, deleteRequest);
+        // 4. Create the complete LDAP message
+        byte[] message = combineArrays(messageIdBytes, deleteRequest);
+        byte[] ldapMessage = encodeSequence((byte)0x30, message);
         
-        // Wrap in outer SEQUENCE
-        byte[] request = encodeSequence((byte) 0x30, ldapMessage);
-        
-        // Output request for debugging
-        System.out.println("Delete request bytes: " + bytesToHex(request));
-        
-        return request;
-    }
-    
-    // Helper method to escape special characters in LDAP DNs
-    private static String escapeLdapDN(String name) {
-        if (name == null) return "";
-        
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < name.length(); i++) {
-            char c = name.charAt(i);
-            if (c == ' ') {
-                // Option 1: Replace space with \20 (hex escape)
-                sb.append("\\ ");
-            } else if (c == ',' || c == '+' || c == '"' || c == '\\' || 
-                      c == '<' || c == '>' || c == ';' || c == '#' || c == '=') {
-                // Escape special characters in LDAP DN
-                sb.append('\\').append(c);
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
+        System.out.println("Delete request bytes: " + bytesToHex(ldapMessage));
+        return ldapMessage;
     }
 
     // Method to parse the Remove Response
@@ -612,8 +597,19 @@ public class RawLdapClient {
             int pos = 0;
             int totalLength = response.length;
             
-            // Debugging: Print out the raw response data
+            // Debugging: Print out the raw response data (can be removed in production)
             System.out.println("DEBUG: Raw list response: " + bytesToHex(response));
+            
+            // Create a list to store all entries before displaying
+            class FriendEntry {
+                String name;
+                String phoneNumber;
+                public FriendEntry(String name, String phoneNumber) {
+                    this.name = name;
+                    this.phoneNumber = phoneNumber;
+                }
+            }
+            java.util.List<FriendEntry> allFriends = new java.util.ArrayList<>();
             
             // Check for minimum length
             if (totalLength < 10) {
@@ -668,9 +664,7 @@ public class RawLdapClient {
                 msgId = (msgId << 8) | (response[pos++] & 0xff);
             }
             
-            System.out.println("Response for message ID: " + msgId);
-            
-            // Process all entries in the response
+            // Process any entries in the first response packet
             boolean hasEntries = false;
             
             while (pos < totalLength) {
@@ -710,55 +704,88 @@ public class RawLdapClient {
                 // Process based on operation tag
                 if (tagByte == 0x64) { // SearchResultEntry (4)
                     hasEntries = true;
-                    parseEntry(response, pos, endPos);
+                    
+                    // Parse the entry and add to our list
+                    String[] entryInfo = parseEntryForListToArray(response, pos, endPos);
+                    if (entryInfo != null && entryInfo.length == 2 && entryInfo[0] != null && !entryInfo[0].isEmpty()) {
+                        allFriends.add(new FriendEntry(entryInfo[0], entryInfo[1]));
+                    }
+                    
                     pos = endPos; // Skip to end of this entry
                 } 
                 else if (tagByte == 0x65) { // SearchResultDone (5)
                     int resultCode = parseResultCode(response, pos, endPos);
                     
-                    if (resultCode == 0) {
-                        if (!hasEntries) {
-                            System.out.println("No entries found.");
-                        }
-                        System.out.println("\nSearch completed successfully.");
-                    } else {
-                        System.out.println("\nSearch completed with result code: " + resultCode);
-                    }
+                    // Don't display anything yet, just mark the result code
+                    hasEntries = hasEntries || !allFriends.isEmpty();
                     pos = endPos; // Skip to end
                 }
                 else if (tagByte == 0x6f || tagByte == 0x70 || tagByte == 0x71) {
-                    // Possible continuation or overflow tags
-                    System.out.println("Processing special tag: 0x" + Integer.toHexString(tagByte));
-                    
-                    // Look ahead for a SearchResultEntry tag
-                    boolean found = false;
-                    for (int i = pos; i < Math.min(pos + 20, totalLength - 1); i++) {
-                        if (response[i] == 0x64 || response[i] == 0x65) {
-                            System.out.println("Found valid tag at offset " + (i - pos));
-                            contentLength = i - pos;
-                            endPos = i;
-                            found = true;
-                            break;
+                    // This is a continuation message or referral - typically contains more entries
+                    // Try to process the content as a nested message
+                    if (contentLength > 0) {
+                        int nestedPos = pos;
+                        
+                        // Look for nested SearchResultEntry tags (0x64)
+                        while (nestedPos < endPos - 2) {
+                            if (response[nestedPos] == 0x64) {
+                                // Found a nested entry - determine its length
+                                int nestedLen = response[nestedPos + 1] & 0xff;
+                                if ((nestedLen & 0x80) != 0) {
+                                    // Skip long form length bytes
+                                    int numLenBytes = nestedLen & 0x7f;
+                                    if (nestedPos + 2 + numLenBytes < endPos) {
+                                        nestedPos += 2 + numLenBytes;
+                                        // Process this nested entry
+                                        String[] entryInfo = parseEntryForListToArray(response, nestedPos, endPos);
+                                        if (entryInfo != null && entryInfo.length == 2 && entryInfo[0] != null && !entryInfo[0].isEmpty()) {
+                                            allFriends.add(new FriendEntry(entryInfo[0], entryInfo[1]));
+                                            hasEntries = true;
+                                        }
+                                    }
+                                } else {
+                                    // Process this nested entry
+                                    String[] entryInfo = parseEntryForListToArray(response, nestedPos + 2, endPos);
+                                    if (entryInfo != null && entryInfo.length == 2 && entryInfo[0] != null && !entryInfo[0].isEmpty()) {
+                                        allFriends.add(new FriendEntry(entryInfo[0], entryInfo[1]));
+                                        hasEntries = true;
+                                    }
+                                }
+                            }
+                            nestedPos++;
                         }
                     }
                     
-                    if (!found) {
-                        // Can't find a valid tag, skip this section
-                        System.out.println("Unable to find valid tag, skipping to next section");
-                    }
-                    
-                    pos = endPos; // Skip this section
+                    pos = endPos; // Skip to the end of this section
                 }
                 else {
+                    // Unknown tag, just skip it
                     System.out.println("Unknown operation tag: 0x" + Integer.toHexString(tagByte));
-                    pos = endPos; // Skip unknown operation
+                    pos = endPos;
                 }
                 
-                // Check if we've reached the end or if there might be more entries
+                // Check if we've reached the end
                 if (pos >= totalLength) {
                     break;
                 }
             }
+            
+            // Now display all the collected friends
+            System.out.println("\n===== FRIENDS LIST =====");
+            System.out.println("Name\t\t\tPhone Number");
+            System.out.println("--------------------------------");
+            
+            if (!allFriends.isEmpty()) {
+                for (FriendEntry friend : allFriends) {
+                    System.out.printf("%-20s\t%s\n", friend.name, friend.phoneNumber);
+                }
+            } else {
+                System.out.println("No friends found.");
+            }
+            
+            System.out.println("--------------------------------");
+            System.out.println("List operation completed successfully.");
+            
         } catch (Exception e) {
             System.out.println("Error parsing list response: " + e.getMessage());
             e.printStackTrace();
@@ -766,6 +793,215 @@ public class RawLdapClient {
         }
     }
     
+    // Modified method to return name and phone number as an array instead of printing directly
+    private static String[] parseEntryForListToArray(byte[] response, int startPos, int endPos) {
+        try {
+            int pos = startPos;
+            String name = "";
+            String phoneNumber = "N/A";
+            
+            // Read the DN (OCTET STRING)
+            if (pos < endPos && response[pos] == 0x04) { // OCTET STRING
+                pos++; // Skip tag
+                
+                // Parse length - handle both short and long form
+                int lenByte = response[pos++] & 0xff;
+                int dnLen;
+                
+                if ((lenByte & 0x80) == 0) {
+                    dnLen = lenByte;
+                } else {
+                    int numBytes = lenByte & 0x7f;
+                    dnLen = 0;
+                    for (int i = 0; i < numBytes && pos < endPos; i++) {
+                        dnLen = (dnLen << 8) | (response[pos++] & 0xff);
+                    }
+                }
+                
+                if (pos + dnLen <= endPos) {
+                    String dn = new String(response, pos, dnLen);
+                    System.out.println("DEBUG: Processing DN: " + dn); // Debug output
+                    
+                    // Extract name from DN (e.g., "cn=joshy 1253,ou=friends,dc=mycompany,dc=com")
+                    if (dn.startsWith("cn=")) {
+                        int commaPos = dn.indexOf(',');
+                        if (commaPos > 3) {
+                            name = dn.substring(3, commaPos);
+                        }
+                    }
+                    pos += dnLen;
+                    
+                    // Move to the attributes
+                    if (pos < endPos) {
+                        // Process attributes to find telephoneNumber
+                        pos = findAndProcessAttributes(response, pos, endPos, phoneNumber);
+                        
+                        // If we found the phone number, update it
+                        phoneNumber = findPhoneNumber(response, pos, endPos);
+                    }
+                }
+            }
+            
+            return new String[] { name, phoneNumber };
+        } catch (Exception e) {
+            System.out.println("Error parsing entry: " + e.getMessage());
+            e.printStackTrace();
+            return new String[] { "", "N/A" };
+        }
+    }
+
+    // Helper to find and extract the phone number from attributes
+    private static String findPhoneNumber(byte[] response, int startPos, int endPos) {
+        try {
+            int pos = startPos;
+            boolean debugEnabled = true; // Set to false to disable detailed debugging
+            
+            // Look for telephoneNumber attribute in the response data
+            while (pos + 4 < endPos) {
+                // Try to find the telephoneNumber attribute by looking for a pattern that indicates 
+                // an OCTET STRING containing "telephoneNumber"
+                if (response[pos] == 0x04) { // OCTET STRING tag
+                    int lengthByte = response[pos + 1] & 0xff;
+                    if (lengthByte == 0x0f && pos + 2 + lengthByte <= endPos) { // Length 15 (for "telephoneNumber")
+                        // Check if this is the telephoneNumber attribute
+                        String attrName = new String(response, pos + 2, lengthByte);
+                        if (attrName.equals("telephoneNumber")) {
+                            if (debugEnabled) System.out.println("DEBUG: Found telephoneNumber attribute at position " + pos);
+                            
+                            // Found the attribute, now find the value
+                            // Move past the attribute name
+                            pos += 2 + lengthByte;
+                            
+                            // Look for the SET OF tag (0x31) that contains the values
+                            if (pos < endPos && response[pos] == 0x31) {
+                                pos++; // Skip SET tag
+                                int setLength = response[pos++] & 0xff;
+                                
+                                // Look for the OCTET STRING that contains the actual phone number
+                                if (pos < endPos && response[pos] == 0x04) {
+                                    pos++; // Skip OCTET STRING tag
+                                    int valueLen = response[pos++] & 0xff;
+                                    
+                                    if (pos + valueLen <= endPos) {
+                                        String phoneNumber = new String(response, pos, valueLen);
+                                        if (debugEnabled) {
+                                            System.out.println("DEBUG: Extracted phone number: " + phoneNumber);
+                                            // Print the raw bytes of the phone number for debugging in a more compact format
+                                            System.out.print("DEBUG: Raw phone number bytes: ");
+                                            for (int i = 0; i < valueLen; i++) {
+                                                System.out.printf("%02x ", response[pos + i] & 0xff);
+                                            }
+                                            System.out.println();
+                                            
+                                            // Check if the phone number format is valid
+                                            boolean validFormat = true;
+                                            for (char c : phoneNumber.toCharArray()) {
+                                                if (!Character.isDigit(c) && c != '+' && c != '-' && c != ' ' && c != '(' && c != ')') {
+                                                    validFormat = false;
+                                                    break;
+                                                }
+                                            }
+                                            if (!validFormat) {
+                                                System.out.println("DEBUG: Warning - Phone number contains unexpected characters");
+                                            }
+                                        }
+                                        return phoneNumber;
+                                    }
+                                }
+                                
+                                // If we couldn't find the phone number in the standard format,
+                                // check if there's any numerical data after the telephoneNumber attribute
+                                int scanPos = pos;
+                                while (scanPos + 2 < endPos) {
+                                    if (response[scanPos] == 0x04) { // OCTET STRING for value
+                                        int len = response[scanPos + 1] & 0xff;
+                                        if (len > 0 && len < 20 && scanPos + 2 + len <= endPos) {
+                                            // Check if this could be a phone number (mostly digits)
+                                            boolean mostlyDigits = true;
+                                            int digitCount = 0;
+                                            for (int i = 0; i < len; i++) {
+                                                char c = (char)response[scanPos + 2 + i];
+                                                if (Character.isDigit(c)) {
+                                                    digitCount++;
+                                                }
+                                            }
+                                            
+                                            // If at least 70% are digits, consider it a phone number
+                                            if (digitCount > 0 && (double)digitCount / len >= 0.7) {
+                                                String phoneNumber = new String(response, scanPos + 2, len);
+                                                if (debugEnabled) {
+                                                    System.out.println("DEBUG: Found likely phone number: " + phoneNumber);
+                                                }
+                                                return phoneNumber;
+                                            }
+                                        }
+                                    }
+                                    scanPos++;
+                                }
+                            }
+                        }
+                    }
+                }
+                pos++; // Try next position
+            }
+            
+            // Alternative approach - scan for common patterns in case the primary approach fails
+            pos = startPos;
+            while (pos + 20 < endPos) {
+                // Look for a pattern where "telephone" might be followed by a number
+                // This is a more flexible approach in case the standard BER parsing doesn't work
+                if (pos + 2 < endPos && response[pos] == 0x31) { // SET OF tag
+                    // Look ahead for potential phone number format
+                    for (int i = pos + 2; i < endPos - 5; i++) {
+                        if (response[i] == 0x04) { // OCTET STRING containing a value
+                            int len = response[i+1] & 0xff;
+                            if (len > 0 && len < 15 && i + 2 + len <= endPos) { // Reasonable length for a phone number
+                                // Check if these bytes form digits
+                                boolean allDigits = true;
+                                for (int j = 0; j < len; j++) {
+                                    char c = (char)response[i + 2 + j];
+                                    if (c < '0' || c > '9') {
+                                        allDigits = false;
+                                        break;
+                                    }
+                                }
+                                
+                                if (allDigits) {
+                                    String phoneNumber = new String(response, i + 2, len);
+                                    if (debugEnabled) System.out.println("DEBUG: Found phone number through alternative method: " + phoneNumber);
+                                    return phoneNumber;
+                                }
+                            }
+                        }
+                    }
+                }
+                pos++;
+            }
+            
+            if (debugEnabled) System.out.println("DEBUG: No phone number found in entry");
+            
+        } catch (Exception e) {
+            System.out.println("Error finding phone number: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return "N/A";
+    }
+    
+    // Helper to position at the beginning of the attributes section
+    private static int findAndProcessAttributes(byte[] response, int startPos, int endPos, String phoneNumber) {
+        int pos = startPos;
+        
+        // Look for SEQUENCE tag (0x30) for attributes
+        while (pos < endPos) {
+            if (response[pos] == 0x30) { // SEQUENCE
+                return pos;
+            }
+            pos++;
+        }
+        
+        return startPos; // Return original position if no attributes found
+    }
+
     // Helper to parse a search result entry
     private static void parseEntry(byte[] response, int startPos, int endPos) {
         try {
@@ -1130,21 +1366,21 @@ public class RawLdapClient {
 
     private static void parseSearchResponse(byte[] response) {
         try {
-            // Print the raw response for debugging
-            System.out.println("Search response: " + bytesToHex(response));
-            
             int pos = 0;
             int totalLength = response.length;
-            
-            // Verify enough bytes for basic structure
+
+            // Debugging: Print out the raw response data
+            System.out.println("Search response: " + bytesToHex(response));
+
+            // Check for minimum length
             if (totalLength < 7) {
                 System.out.println("Response too short: " + bytesToHex(response));
                 return;
             }
-            
+
             // Skip SEQUENCE tag
             pos++;
-            
+
             // Parse length - handle both short and long form
             int lengthByte = response[pos++] & 0xff;
             if ((lengthByte & 0x80) != 0) {
@@ -1152,173 +1388,80 @@ public class RawLdapClient {
                 int numLengthBytes = lengthByte & 0x7f;
                 pos += numLengthBytes; // Skip length bytes
             }
-            
+
             // Message ID (INTEGER tag)
             if (pos >= totalLength || response[pos] != 0x02) {
-                System.out.println("Expected INTEGER tag for messageID, got: " + 
-                                  (pos < totalLength ? "0x" + Integer.toHexString(response[pos] & 0xff) : "end of data"));
+                System.out.println("Expected INTEGER tag for messageID, got: " +
+                        (pos < totalLength ? "0x" + Integer.toHexString(response[pos] & 0xff) : "end of data"));
                 return;
             }
             pos++; // Skip INTEGER tag
-            
+
             // Message ID length
-            if (pos >= totalLength) {
-                System.out.println("Truncated data after INTEGER tag");
-                return;
-            }
-            
             int idLen = response[pos++] & 0xff;
             if (pos + idLen > totalLength) {
                 System.out.println("Message ID value truncated");
                 return;
             }
-            
+
             // Read message ID value
             int msgId = 0;
             for (int i = 0; i < idLen; i++) {
                 msgId = (msgId << 8) | (response[pos++] & 0xff);
             }
-            
+
             System.out.println("Search response for message ID: " + msgId);
-            
-            // Check for operation tag
-            if (pos >= totalLength) {
-                System.out.println("Response truncated after message ID");
-                return;
-            }
-            
-            int opTag = response[pos++] & 0xff;
-            
-            // Handle different response types
-            if (opTag == 0x64) { // SearchResultEntry (4)
-                // Process entries
-                processSearchEntry(response, pos, totalLength);
-            } 
-            else if (opTag == 0x65) { // SearchResultDone (5)
-                // Skip length byte
-                if (pos < totalLength) pos++;
-                
-                // Look for result code (ENUMERATED)
-                if (pos < totalLength && response[pos] == 0x0A) {
-                    pos++; // Skip ENUMERATED tag
-                    if (pos < totalLength) {
+
+            // Process entries
+            System.out.println("\n===== SEARCH RESULT =====");
+            System.out.println("Name\t\t\tPhone Number");
+            System.out.println("--------------------------------");
+
+            boolean hasEntries = false;
+
+            while (pos < totalLength) {
+                int tagByte = response[pos++] & 0xff;
+
+                if (tagByte == 0x64) { // SearchResultEntry
+                    // Parse the entry
+                    String[] entryInfo = parseEntryForListToArray(response, pos, totalLength);
+                    if (entryInfo != null && entryInfo.length == 2 && entryInfo[0] != null && !entryInfo[0].isEmpty()) {
+                        System.out.printf("%-20s\t%s\n", entryInfo[0], entryInfo[1]);
+                        hasEntries = true;
+                    }
+                } else if (tagByte == 0x65) { // SearchResultDone
+                    // Skip length byte
+                    if (pos < totalLength) pos++;
+
+                    // Look for result code (ENUMERATED)
+                    if (pos < totalLength && response[pos] == 0x0A) {
+                        pos++; // Skip ENUMERATED tag
                         int codeLen = response[pos++] & 0xff;
-                        
+
                         if (pos + codeLen <= totalLength) {
                             int resultCode = 0;
                             for (int i = 0; i < codeLen; i++) {
                                 resultCode = (resultCode << 8) | (response[pos++] & 0xff);
                             }
-                            
-                            if (resultCode == 0) {
-                                System.out.println("Search completed successfully, no matching entries found.");
-                            } else {
+
+                            if (resultCode == 0 && !hasEntries) {
+                                System.out.println("No matching entries found.");
+                            } else if (resultCode != 0) {
                                 System.out.println("Search completed with result code: " + resultCode);
                             }
                         }
                     }
+                    break; // End of search response
+                } else {
+                    System.out.println("Unknown operation tag: 0x" + Integer.toHexString(tagByte));
+                    break;
                 }
-            } else {
-                System.out.println("Unknown operation tag in search response: 0x" + Integer.toHexString(opTag));
             }
+
+            System.out.println("--------------------------------");
         } catch (Exception e) {
             System.out.println("Error parsing search response: " + e.getMessage());
-            System.out.println("Response dump: " + bytesToHex(response));
-        }
-    }
-    
-    private static void processSearchEntry(byte[] response, int startPos, int totalLength) {
-        try {
-            int pos = startPos;
-            
-            // Skip length byte
-            if (pos < totalLength) pos++;
-            
-            // Read the DN
-            if (pos < totalLength && response[pos] == 0x04) { // OCTET STRING
-                pos++; // Skip tag
-                if (pos < totalLength) {
-                    int dnLen = response[pos++] & 0xff;
-                    
-                    if (pos + dnLen <= totalLength) {
-                        String dn = new String(response, pos, dnLen);
-                        System.out.println("Found entry: " + dn);
-                        pos += dnLen;
-                        
-                        // Process attributes if any
-                        if (pos < totalLength && response[pos] == 0x30) { // SEQUENCE of attributes
-                            parseAttributes(response, pos, totalLength);
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error processing search entry: " + e.getMessage());
-        }
-    }
-    
-    private static void parseAttributes(byte[] response, int startPos, int totalLength) {
-        try {
-            int pos = startPos + 1; // Skip SEQUENCE tag
-            
-            // Skip length byte
-            if (pos < totalLength) pos++;
-            
-            // Read attributes
-            while (pos < totalLength && response[pos] == 0x30) { // SEQUENCE for each attribute
-                pos++; // Skip SEQUENCE tag
-                
-                // Skip length byte
-                if (pos < totalLength) pos++;
-                
-                // Attribute type
-                if (pos < totalLength && response[pos] == 0x04) { // OCTET STRING
-                    pos++; // Skip tag
-                    
-                    if (pos < totalLength) {
-                        int typeLen = response[pos++] & 0xff;
-                        
-                        if (pos + typeLen <= totalLength) {
-                            String type = new String(response, pos, typeLen);
-                            pos += typeLen;
-                            
-                            // Attribute values (SET OF)
-                            if (pos < totalLength && response[pos] == 0x31) { // SET
-                                pos++; // Skip SET tag
-                                
-                                if (pos < totalLength) {
-                                    // Skip SET length
-                                    pos++;
-                                    
-                                    StringBuilder values = new StringBuilder();
-                                    
-                                    // Read values
-                                    while (pos < totalLength && response[pos] == 0x04) { // OCTET STRING
-                                        pos++; // Skip OCTET STRING tag
-                                        
-                                        if (pos < totalLength) {
-                                            int valueLen = response[pos++] & 0xff;
-                                            
-                                            if (pos + valueLen <= totalLength) {
-                                                if (values.length() > 0) values.append(", ");
-                                                values.append(new String(response, pos, valueLen));
-                                                pos += valueLen;
-                                            }
-                                        }
-                                    }
-                                    
-                                    System.out.println("  " + type + ": " + values.toString());
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Skip to next attribute if we can't fully parse this one
-                while (pos < totalLength && response[pos] != 0x30) pos++;
-            }
-        } catch (Exception e) {
-            System.out.println("Error parsing attributes: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
