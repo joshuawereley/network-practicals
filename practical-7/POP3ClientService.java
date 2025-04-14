@@ -1,109 +1,91 @@
-import java.net.Socket;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.util.Map;
+import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.HashMap;
+import java.util.Map;
 
 public class POP3ClientService {
-  private Socket socket;
-  private BufferedReader input;
-  private OutputStreamWriter output;
 
-  public POP3ClientService(String server, int port) {
-    if (!server.isEmpty()) {
-      this.socket = new Socket(server, port);
-      InputStreamReader isr = new InputStreamReader(socket.getInputStream());
-      this.input = new BufferedReader(isr);
-      this.output = new OutputStreamWriter(socket.getOutputStream());
-      readServerResponse();
+    private Socket socket;
+    private BufferedReader input;
+    private BufferedWriter output;
+    private final POP3ResponseParser parser = new POP3ResponseParser();
+
+    public void connect(String server, int port) throws IOException {
+        socket = new Socket(server, port);
+        input = new BufferedReader(
+            new InputStreamReader(socket.getInputStream())
+        );
+        output = new BufferedWriter(
+            new OutputStreamWriter(socket.getOutputStream())
+        );
+        readResponse();
     }
-  }
 
-  public String readServerResponse() {
-    return intput.readLine();
-  }
-
-  public boolean login(String username, String password) {
-    if (!username.isEmpty() && !password.isEmpty()) {
-      sendCommand("USER " + username);
-      String response = readServerResponse();
-      if (response.startsWith("+OK")) {
-        sendCommand("PASS " + password);
-        return true;
-      }
-      return false;
+    public boolean login(String username, String password) throws IOException {
+        sendCommand("USER " + username);
+        if (parser.isSuccess(readResponse())) {
+            sendCommand("PASS " + password);
+            return parser.isSuccess(readResponse());
+        }
+        return false;
     }
-  }
 
-  public void sendCommand(String command) {
-    output.write(command + "\r\n");
-    output.flush();
-  }
+    public List<EmailMetaData> fetchEmailMetadata() throws IOException {
+        List<EmailMetaData> emails = new ArrayList<>();
+        sendCommand("LIST");
+        Map<Integer, Integer> idToSize = parser.parseListResponse(
+            readMultilineResponse()
+        );
 
-  public List<EmailMetaData> fetchEmailMetadata() {
-    sendCommand("LIST");
-    List<String> response = readMultilineResponse();
-    Map<Integer, Integer> emailIdsAndSizes = parseListResponse(response);
-    List<EmailMetaData> emails = new List<EmailMetaData>();
-    for (Map.Entry<Integer, Integer> entry : emailIdsAndSizes.entrySet()) {
-      int id = entry.getKey();
-      int size = entry.getValue();
-
-      sendCommand("TOP" + id + " 0");
-      List<String> headers = readMultilineResponse();
-
-      String sender = extractHeader(headers, "From:");
-      String subject = extractHeader(headers, "Subject:");
-      EmailMetaData emailMetaData = new EmailMetaData(id, sender, subject, size);
-      emails.add(emailMetaData);
+        for (Map.Entry<Integer, Integer> entry : idToSize.entrySet()) {
+            sendCommand("TOP " + entry.getKey() + " 0");
+            List<String> headers = readMultilineResponse();
+            String sender = parser.extractHeader(headers, "From:");
+            String subject = parser.extractHeader(headers, "Subject:");
+            emails.add(
+                new EmailMetaData(
+                    entry.getKey(),
+                    sender,
+                    subject,
+                    entry.getValue()
+                )
+            );
+        }
+        return emails;
     }
-    return emails;
-  }
 
-  public List<String> readMultilineResponse() {
-    List<String> lines = new List<String>();
-    while (String line = input.readLine() != ".") {
-      lines.add(line);
+    public void deleteEmails(List<Integer> ids) throws IOException {
+        for (int id : ids) {
+            sendCommand("DELE " + id);
+            readResponse();
+        }
     }
-    return lines;
-  }
 
-  public Map<Integer, Integer> parseListResponse(List<String> listResponse) {
-    Map<Integer, Integer> emailIdsAndSizes = new HashMap<Integer, Integer>();
-    for (String line : listResponse) {
-      if (line.equals(".") || !Character.isDigit(line.charAt(0))) {
-        continue;
-      }
-      String[] parts = line.split(" ");
-      if (parts.length >= 2) {
-        int id = Integer.parseInt(parts[0]);
-        int size = Integer.parseInt(parts[1]);
-        emailIdsAndSizes.put(id, size);
-      }
+    public void disconnect() throws IOException {
+        sendCommand("QUIT");
+        socket.close();
     }
-    return emailIdsAndSizes;
-  }
-  
-  public String extractHeader(List<String> headers, String headerName) {
-    for (String line : headers) {
-      if (line.startsWith(headerName)) {
-        return line.substring(headerName.length()).trim();
-      }
-    }
-    return "";
-  }
 
-  public void deleteEmails(List<Integers> ids) {
-    for (int id : ids) {
-      sendCommand("DELE " + id);
-      readServerResponse();
+    private void sendCommand(String command) throws IOException {
+        output.write(command + "\r\n");
+        output.flush();
     }
-  }
 
-  public void disconnect() {
-    sendCommand("QUIT");
-    readServerResponse();
-    socket.close();
-  }
+    private String readResponse() throws IOException {
+        return input.readLine();
+    }
+
+    private List<String> readMultilineResponse() throws IOException {
+        List<String> lines = new ArrayList<>();
+        String line;
+        while ((line = input.readLine()) != null && !line.equals(".")) {
+            lines.add(line);
+        }
+        return lines;
+    }
 }
