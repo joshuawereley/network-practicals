@@ -47,4 +47,8 @@ public class POP3ResponseParser {
         }
         return idToUIDL;
     }
+
+    public boolean isSuccessResponse(String response) {
+        return response != null && response.startsWith("+OK");
+    }
 }
