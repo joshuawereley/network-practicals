@@ -1,37 +1,33 @@
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class POP3ResponseParser {
 
-    public Map<Integer, Integer> parseListResponse(List<String> listResponse)
+    public Map<Integer, Integer> parseListResponse(List<String> response)
         throws IOException {
-        Map<Integer, Integer> sizeMap = new HashMap<>();
-        for (String line : listResponse) {
+        Map<Integer, Integer> idToSize = new HashMap<>();
+        for (String line : response) {
             if (
                 line.equals(".") ||
-                !Character.isDigit(line.charAt(0)) ||
-                line.startsWith("-ERR")
+                line.startsWith("-ERR") ||
+                !Character.isDigit(line.charAt(0))
             ) {
                 continue;
             }
             String[] parts = line.trim().split("\\s+");
             if (parts.length >= 2) {
-                try {
-                    int id = Integer.parseInt(parts[0]);
-                    int size = Integer.parseInt(parts[1]);
-                    sizeMap.put(id, size);
-                } catch (NumberFormatException e) {
-                    throw new IOException("Invalid response format", e);
-                }
+                idToSize.put(
+                    Integer.parseInt(parts[0]),
+                    Integer.parseInt(parts[1])
+                );
             }
         }
-        return sizeMap;
+        return idToSize;
     }
 
-    public String extractHeaders(List<String> headers, String headerName) {
+    public String extractHeader(List<String> headers, String headerName) {
         for (String line : headers) {
             if (line.startsWith(headerName)) {
                 return line.substring(headerName.length()).trim();
@@ -40,21 +36,7 @@ public class POP3ResponseParser {
         return "";
     }
 
-    public Map<Integer, String> parseUIDLResponse(List<String> uidlResponse) {
-        Map<Integer, String> idToUIDL = new HashMap<>();
-        for (String line : uidlResponse) {
-            if (line.equals(".") || !Character.isDigit(line.charAt(0))) {
-                continue;
-            }
-            String[] parts = line.trim().split("\\s+");
-            if (parts.length >= 2) {
-                idToUIDL.put(Integer.parseInt(parts[0]), parts[1]);
-            }
-        }
-        return idToUIDL;
-    }
-
-    public boolean isSuccessResponse(String response) {
+    public boolean isSuccess(String response) {
         return response != null && response.startsWith("+OK");
     }
 }
