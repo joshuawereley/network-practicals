@@ -1,12 +1,7 @@
 import java.awt.*;
-import java.awt.event.*;
 import java.util.ArrayList;
 import javax.swing.*;
 
-/**
- * Main application class for POP3 email client
- * Allows viewing and deleting emails without downloading them
- */
 public class Main {
 
     private static POP3Client pop3Client;
@@ -23,12 +18,10 @@ public class Main {
     }
 
     private static void createAndShowGUI() {
-        // Create main frame
         frame = new JFrame("POP3 Email Manager");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
 
-        // Create login panel
         JPanel loginPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
@@ -72,7 +65,6 @@ public class Main {
         connectButton.addActionListener(e -> connectToPOP3Server());
         loginPanel.add(connectButton, gbc);
 
-        // Create email list panel (initially empty)
         emailPanel = new JPanel();
         emailPanel.setLayout(new BoxLayout(emailPanel, BoxLayout.Y_AXIS));
 
@@ -90,7 +82,6 @@ public class Main {
         refreshButton.addActionListener(e -> connectToPOP3Server());
         bottomPanel.add(refreshButton);
 
-        // Add components to frame
         frame.setLayout(new BorderLayout());
         frame.add(loginPanel, BorderLayout.NORTH);
         frame.add(scrollPane, BorderLayout.CENTER);
@@ -108,8 +99,6 @@ public class Main {
         try {
             setCursor(true);
 
-            // Create a new POP3 client and connect to server
-            // For Gmail, we need to use SSL
             if (server.equals("pop.gmail.com") && port == 995) {
                 pop3Client = new SSLPop3Client(server, port);
             } else {
@@ -128,10 +117,8 @@ public class Main {
                 return;
             }
 
-            // Get email list
             emails = pop3Client.listEmails();
 
-            // Update UI with emails
             updateEmailPanel();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(
@@ -149,7 +136,6 @@ public class Main {
     private static void updateEmailPanel() {
         emailPanel.removeAll();
 
-        // Add header
         JPanel headerPanel = new JPanel(new GridLayout(1, 4));
         headerPanel.add(new JLabel("Select"));
         headerPanel.add(new JLabel("From"));
@@ -161,7 +147,6 @@ public class Main {
         headerContainer.add(headerPanel, BorderLayout.NORTH);
         emailPanel.add(headerContainer);
 
-        // Add emails
         if (emails != null) {
             for (Email email : emails) {
                 JPanel emailRow = new JPanel(new GridLayout(1, 4));
@@ -210,25 +195,37 @@ public class Main {
                 frame,
                 "Are you sure you want to delete " +
                 toDelete.size() +
-                " message(s)?",
+                " message(s)? " +
+                "This will permanently remove them from your Gmail account.",
                 "Confirm Deletion",
                 JOptionPane.YES_NO_OPTION
             );
 
             if (confirm == JOptionPane.YES_OPTION) {
+                System.out.println(
+                    "Deleting " + toDelete.size() + " message(s)..."
+                );
+
                 for (Email email : toDelete) {
+                    System.out.println(
+                        "Marking message #" +
+                        email.getMessageNumber() +
+                        " for deletion"
+                    );
                     pop3Client.deleteEmail(email.getMessageNumber());
                 }
 
-                // Commit the deletions
+                System.out.println("Committing deletions with QUIT command");
                 pop3Client.quit();
 
-                // Reconnect and refresh the list
+                System.out.println("Reconnecting to check results");
                 connectToPOP3Server();
 
                 JOptionPane.showMessageDialog(
                     frame,
-                    toDelete.size() + " message(s) deleted successfully."
+                    toDelete.size() +
+                    " message(s) deleted successfully.\n" +
+                    "Note: Gmail may take a few minutes to sync these changes."
                 );
             }
         } catch (Exception ex) {
